@@ -1,0 +1,41 @@
+{
+  "name": "tymfrontiers-cdn/php-sos-emailer",
+  "description": "PHP: EMailer for 7OS, uses mailgun and other APIs",
+  "keywords": ["php","emailer","soswapp","sos","seven","mailgun"],
+  "homepage": "https://github.com/tymfrontiers-cdn/php-sos-emailer",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+      {
+          "name": "Sir Louis",
+          "email": "me@sirlouis.io",
+          "homepage": "https://sirlouis.io",
+          "role": "developer"
+      },
+      {
+          "name": "Tym Frontiers Ltd",
+          "email": "git@tymfrontiers.com",
+          "homepage": "https://tymfrontiers.com",
+          "role": "developer"
+      }
+  ],
+  "require": {
+    "php" : ">=5.3",
+    "tymfrontiers-cdn/php-data" : ">=0.1@stable",
+    "tymfrontiers-cdn/php-mysql-database" : ">=0.1@stable",
+    "tymfrontiers-cdn/php-pagination" : ">=0.1@stable",
+    "tymfrontiers-cdn/php-mysql-database-object" : ">=0.1@stable",
+    "tymfrontiers-cdn/php-instance-error" : ">=0.1@stable",
+    "tymfrontiers-cdn/php-validator" : ">=0.1@stable",
+    "tymfrontiers-cdn/php-generic" : ">=0.1@stable",
+    "tymfrontiers-cdn/php-file" : ">=0.1@stable",
+    "tymfrontiers-cdn/php-multiform" : ">=0.1@stable",
+    "mailgun/mailgun-php": ">=2.8@stable"
+  },
+  "require-dev": {},
+  "autoload": {
+      "psr-4": {
+          "SOS\\": "src/"
+      }
+  }
+}
