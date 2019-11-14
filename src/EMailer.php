@@ -38,8 +38,8 @@ class EMailer{
   protected static $_prop_type = [];
   protected static $_prop_size = [];
 
-  const PREFIX = "WBZEML.";
-  const SURFIX = ".WBZEML";
+  const PREFIX = "SOSEML.";
+  const SURFIX = ".SOSEML";
 
   private $id;
 
@@ -128,7 +128,7 @@ class EMailer{
                 }
               }
 
-              $mgClient = new Mailgun($email_domain_key);
+              $mgClient = Mailgun::create($email_domain_key);
               $msg_r = [
                 'from' => $this->sender,
                 'to' => $this->receiver,
@@ -149,16 +149,15 @@ class EMailer{
               try {
                 // die( var_dump($attachments[$batch]) );
                 $result = !empty($attachments)
-                  ? $mgClient->sendMessage($this->domain,$msg_r,['attachment'=>$attachments])
-                  : $mgClient->sendMessage($this->domain,$msg_r);
-
+                  ? $mgClient->messages()->send($this->domain,$msg_r,['attachment'=>$attachments])
+                  : $mgClient->messages()->send($this->domain,$msg_r);
                 if(
                   \is_object($result) &&
-                  !empty($result->http_response_body->id) &&
-                  \strpos($result->http_response_body->id, $this->domain) !== false
+                  !empty($result->getId()) &&
+                  \strpos($result->getId(), $email_domain) !== false
                 ){
                   $this->status = 'S';
-                  $this->qid = $result->http_response_body->id;
+                  $this->qid = $result->getId();
                   return $this->_update();
                 }else{
                   // echo "Failed to send message. \r\n";

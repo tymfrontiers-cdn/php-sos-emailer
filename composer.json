@@ -30,7 +30,9 @@
     "tymfrontiers-cdn/php-generic" : ">=0.1@stable",
     "tymfrontiers-cdn/php-file" : ">=0.1@stable",
     "tymfrontiers-cdn/php-multiform" : ">=0.1@stable",
-    "mailgun/mailgun-php": ">=2.8@stable"
+    "mailgun/mailgun-php": ">=2.8@stable",
+    "kriswallsmith/buzz": ">=1.0@stable",
+    "nyholm/psr7": ">=1.2@stable"
   },
   "require-dev": {},
   "autoload": {
