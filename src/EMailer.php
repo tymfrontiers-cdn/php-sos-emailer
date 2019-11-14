@@ -33,7 +33,10 @@ class EMailer{
     "bcc",
     "headers",
     "_created",
-    "_updated"];
+    "_updated"
+  ];
+  protected static $_prop_type = [];
+  protected static $_prop_size = [];
 
   const PREFIX = "WBZEML.";
   const SURFIX = ".WBZEML";
