@@ -20,7 +20,6 @@
       }
   ],
   "require": {
-    "php" : ">=5.3",
     "tymfrontiers-cdn/php-data" : ">=0.1@stable",
     "tymfrontiers-cdn/php-mysql-database" : ">=0.1@stable",
     "tymfrontiers-cdn/php-pagination" : ">=0.1@stable",
