@@ -3,6 +3,7 @@ namespace SOS;
 use \TymFrontiers\Data,
     \TymFrontiers\Generic,
     \TymFrontiers\MultiForm,
+    \TymFrontiers\MySQLDatabase,
     \TymFrontiers\File,
     \TymFrontiers\InstanceError,
     \Mailgun\Mailgun;
@@ -66,12 +67,12 @@ class EMailer{
   public $errors = [];
 
   function __construct( $prop = [], int $priority=5){
-    global $email_domain;
+    global $mailgun_api_domain;
     if( \is_array($prop) && !empty($prop)){
       $this->init($prop);
     }
     $this->batch = !empty($this->batch) ? $this->batch : self::PREFIX . \time();
-    $this->domain = !empty($this->domain) ? $this->domain : $email_domain;
+    $this->domain = !empty($this->domain) ? $this->domain : $mailgun_api_domain;
     $this->priority = $priority;
   }
   public function init( array $prop ){
@@ -110,25 +111,31 @@ class EMailer{
   public function send(){
     if( ( empty($this->id) && $this->queue() ) || !empty($this->id)  ){
       if( \in_array($this->status,['Q','D']) ){
-        global $email_domain,$email_gateways,$email_domain_key,$email_transports,$db;
+        global $mailgun_api_domain, $mailgun_api_key, $database, $session;
         if( $this->gateway == 'MAILGUN' ){
           if( $this->transport == 'API' ){
             $attachments = [];
             if( (bool)$this->has_attachment ){
-              $files = File::findBySql("SELECT * FROM " . MYSQL_LOG_DB .".file WHERE id IN (
-                SELECT fid FROM ".MYSQL_LOG_DB.".email_outbox_attachment WHERE ebatch = '{$db->escapeValue($this->batch)}'
-                )");
+              $log_db = MYSQL_LOG_DB;
+              $files = (new File)
+                ->findBySql("SELECT *
+                            FROM :db:.:tbl:
+                            WHERE id IN (
+                              SELECT fid
+                              FROM `{$log_db}`.`email_outbox_attachment`
+                              WHERE ebatch = '{$database->escapeValue($this->batch)}'
+                            )");
                 if( $files ){
                   foreach($files as $file){
                     $attachments[] = [
-                      "remoteName" => $file->nice_name . '.' . Generic::fileExt($file->fullPath()),
-                      "filePath" => $file->fullPath()
+                      "filePath" => $file->fullPath(),
+                      "filename" => $file->nice_name . '.' . Generic::fileExt($file->fullPath()),
                     ];
                   }
                 }
               }
 
-              $mgClient = Mailgun::create($email_domain_key);
+              $mgClient = Mailgun::create($mailgun_api_key);
               $msg_r = [
                 'from' => $this->sender,
                 'to' => $this->receiver,
@@ -146,19 +153,26 @@ class EMailer{
                   }
                 }
               }
+              if (!empty($attachments)) {
+                $msg_r["attachment"] = $attachments;
+              }
               try {
-                // die( var_dump($attachments[$batch]) );
-                $result = !empty($attachments)
-                  ? $mgClient->messages()->send($this->domain,$msg_r,['attachment'=>$attachments])
-                  : $mgClient->messages()->send($this->domain,$msg_r);
+                // die( var_dump($attachments) );
+                $result = $mgClient->messages()->send($this->domain,$msg_r);
                 if(
                   \is_object($result) &&
                   !empty($result->getId()) &&
-                  \strpos($result->getId(), $email_domain) !== false
+                  \strpos($result->getId(), $mailgun_api_domain) !== false
                 ){
-                  $this->status = 'S';
-                  $this->qid = $result->getId();
-                  return $this->_update();
+                  // reconnect
+                  $conn = new MySQLDatabase(MYSQL_SERVER, MYSQL_DEVELOPER_USERNAME, MYSQL_DEVELOPER_PASS);
+                  $log_db = MYSQL_LOG_DB;
+                  if (!$conn->query("UPDATE `{$log_db}`.`email_outbox` SET `status` = 'S', `qid` = '{$conn->escapeValue($result->getId())}' WHERE id= {$this->id} LIMIT 1")) {
+                    $this->errors['send'][] = [1, 256,"Failed to update record",__FILE__,__LINE__];
+                  } else {
+                    $conn->closeConnection();
+                    return true;
+                  }
                 }else{
                   // echo "Failed to send message. \r\n";
                   $this->errors['send'][] = [3,256,"Failed to send [Email] message",__FILE__,__LINE__];
@@ -177,5 +191,22 @@ class EMailer{
   public function id(){ return $this->id; }
   public function load( int $id){
     return self::findById($id);
+  }
+  public final function attachFile(array $ids) {
+    global $database;
+    $log_db = MYSQL_LOG_DB;
+    if ($ids && !empty($this->batch)) {
+      $query = "INSERT INTO `{$log_db}`.`email_outbox_attachment` (`ebatch`, `fid`) VALUES ";
+      $val_rr = [];
+      foreach ($ids as $id) {
+        $id = (int)$id;
+        if (\is_int($id) && $id > 0)  $val_rr[] = "('{$this->batch}',{$id})";
+      }
+      if (empty($val_rr)) throw new \Exception("[ids] is not array of file ids", 1);
+      $query .= \implode(",",$val_rr);
+      if (!$database->query($query)) throw new \Exception("Attaching file(s) failed, try again.", 1);
+      $this->has_attachment = true;
+      return true;
+    }
   }
 }
